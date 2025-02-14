@@ -11,55 +11,52 @@ brgr
 bbrgwb
 `.trim().split('\n')
 
-let supply = input[0].split(",").map((t) => t.trim()).sort((a, b) => b.length - a.length)
+let supply: Set<string> = new Set(input[0].split(",").map((t) => t.trim()))
 let designs = input.slice(2).map((d) => d.trim())
 
 
-
-
-function matchTowelsToSubDesign(design: string, supply: string[]): ([string, string] | null) {
-  for (const towel of supply) {
-    if (design.match(new RegExp(towel, "g"))) {
-      // Find towel that fulfills part of the design and replace it #. This preserves design.
-      return [design.replace(new RegExp(towel, 'g'), '#'), towel]
-    }
+function subDesignExplode(design: string, results: Set<Set<string>>, subDesign: string[] = []) {
+  if (design.length == 0) {
+    results.add(new Set(subDesign))
+    return
   }
-  return null
+
+  for (let i = 0; i < design.length; i++) {
+    subDesign.push(design.slice(0, i + 1))
+    subDesignExplode(design.slice(i + 1), results, subDesign)
+    subDesign.pop()
+  }
+}
+// Recursively explode the design to all possible subdesign
+//help from https://www.techiedelight.com/find-combinations-non-overlapping-substrings-string/
+function designExplode(design: string): Set<Set<string>> {
+  let results: Set<Set<string>> = new Set()
+  subDesignExplode(design, results)
+  return results
 }
 
-function matchTowelsToDesign(design: string, supply: string[]): ([string, string[]] | null) {
-  let subdesign: string = design
-  let towels: string[] = []
-  // Continue until the whole design has been claimed.
-  while (!subdesign.match(/^#+$/)) {
-    let res = matchTowelsToSubDesign(subdesign, supply)
-    // No more matches have been found so bail out
-    if (!res) {
-      break
+function designInSupply(design: string, supply: Set<string>): boolean {
+  let combinations = designExplode(design)
+  // Check if each combination of exploded designed could be a subset of the supply
+  for (const combination of combinations) {
+    if (combination.isSubsetOf(supply)) {
+      return true
     }
-    subdesign = res[0]
-    towels.push(res[1])
   }
-  // The design could not be completed with the supply
-  if (!subdesign.match(/^#+$/)) {
-    return null
-  }
-  return [design, towels]
-
+  return false
 }
 
-function matchTowels(designs: string[], supply: string[]): { [design: string]: string[] } {
-  let result: { [design: string]: string[] } = {}
+function countDesigns(designs: string[], supply: Set<string>): number {
+  let result = 0
   for (const design of designs) {
-    let res = matchTowelsToDesign(design, supply)
-    // The design is valid store it for later
-    if (res) {
-      result[res[0]] = res[1]
+    if (designInSupply(design, supply)) {
+      result++
     }
   }
   return result
 }
 
-let answer = matchTowels(designs, supply)
 
-console.log(Object.keys(answer).length)
+let answer = countDesigns(designs, supply)
+
+console.log(answer)
