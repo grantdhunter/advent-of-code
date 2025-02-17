@@ -195,9 +195,9 @@ console.log(answer)
 : 6
 
 * Attempt 4
-At this point I was spinning my wheels and stuck in my head about what to do. When this happens at work I reach out to colleagues and walk them through my though my though process and layout my ideas. Either the act of talking clears things up or my colleagues and I are able to bound ideas off of each other until we reach a solution.
+At this point I was spinning my wheels and stuck in my head about what to do. When this happens at work I reach out to colleagues and walk them through my thought process and layout my ideas. Either the act of talking clears things up or my colleagues and I are able to bounce ideas off of each other until we reach a solution.
 
-Not having colleagues, I ended up looking up how others solved this problem. Reading through the solutions I found that I was on the right track with my third attempt I was just going too far into the weeds.
+Not having colleagues to collaborate with, I looked up how others solved this problem. Reading through the solutions my third attempt while being fairly far off in the weeds was going in the right direction. 
 
 The first iteration of Attempt 4 did not have any caching and ran longer than I had patience, adding memoization was a must.
 #+BEGIN_SRC typescript 
