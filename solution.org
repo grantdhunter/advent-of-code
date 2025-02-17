@@ -1,0 +1,248 @@
+#+TITLE: Advent of Code Day 19
+#+author: Grant Hunter
+
+
+* Initial Thoughts
+We have to iterate over the design string and check if one of the towel strings is a substring of the design, then repeat for the whole design.
+
+* Attempt 1.
+We can sort the towel supply by length then iterate over the design string greedily comparing substring to the towels and determine if the design is valid.
+
+This worked on the practice data but failed on the main puzzle input because the greediness of the solution would miss other valid patterns.
+#+BEGIN_SRC typescript
+const fs = require('node:fs')
+
+let input: string[] = fs.readFileSync('./practice.txt', 'utf8').trim().split('\n')
+
+// sort the supply longest to short test to make the algorithm greedy
+let supply = input[0].split(",").map((t) => t.trim()).sort((a, b) => b.length - a.length)
+let designs = input.slice(2).map((d) => d.trim())
+
+
+
+
+function matchTowelsToSubDesign(design: string, supply: string[]): (string | null) {
+  for (const towel of supply) {
+    if (design.startsWith(towel)) {
+      // Find towel that fulfills part of the design and replace it #. This preserves design.
+      return design.slice(towel.length)
+    }
+  }
+  return null
+}
+
+function matchTowelsToDesign(design: string, supply: string[]): number {
+  let subdesign: string = design
+  // Continue until the whole design has been claimed.
+  while (subdesign.length > 0) {
+    let res = matchTowelsToSubDesign(subdesign, supply)
+    // No more matches have been found so bail out
+    if (res === null) {
+      break
+    }
+    subdesign = res
+  }
+  // The design could not be completed with the supply
+  if (subdesign.length > 0) {
+    return 0
+  }
+  return 1
+
+}
+
+function matchTowels(designs: string[], supply: string[]): number {
+  let answer = 0
+  for (const design of designs) {
+    answer += matchTowelsToDesign(design, supply)
+  }
+  return answer
+}
+
+let answer = matchTowels(designs, supply)
+
+console.log(answer)
+
+  #+END_SRC
+
+  #+RESULTS:
+  : 6
+  
+* Attempt 2.
+In order to bypass the greediness issue the solution will have to look at every combination of substring in the design and check if at least one of them was a subset of the supply. 
+
+This works on the small practice data but it's not very practical because it consumes a lot of memory and does way more computation than required.
+#+BEGIN_SRC typescript :cmdline --target es2015 --lib esnext,dom --esModuleInterop true --skipLibCheck true
+const fs = require('node:fs')
+
+let input: string[] = fs.readFileSync('./practice.txt', 'utf8').trim().split('\n')
+
+let supply: Set<string> = new Set(input[0].split(",").map((t) => t.trim()))
+let designs = input.slice(2).map((d) => d.trim())
+
+
+function subDesignExplode(design: string, results: Set<Set<string>>, subDesign: string[] = []) {
+  if (design.length == 0) {
+    results.add(new Set(subDesign))
+    return
+  }
+
+  for (let i = 0; i < design.length; i++) {
+    subDesign.push(design.slice(0, i + 1))
+    subDesignExplode(design.slice(i + 1), results, subDesign)
+    subDesign.pop()
+  }
+}
+// Recursively explode the design to all possible subdesign
+//help from https://www.techiedelight.com/find-combinations-non-overlapping-substrings-string/
+function designExplode(design: string): Set<Set<string>> {
+  let results: Set<Set<string>> = new Set()
+  subDesignExplode(design, results)
+  return results
+}
+
+function designInSupply(design: string, supply: Set<string>): boolean {
+  let combinations = designExplode(design)
+  // Check if each combination of exploded designed could be a subset of the supply
+  for (const combination of combinations) {
+    if (combination.isSubsetOf(supply)) {
+      return true
+    }
+  }
+  return false
+}
+
+function countDesigns(designs: string[], supply: Set<string>): number {
+  let result = 0
+  for (const design of designs) {
+    if (designInSupply(design, supply)) {
+      result++
+    }
+  }
+  return result
+}
+
+
+let answer = countDesigns(designs, supply)
+
+console.log(answer)
+
+  #+END_SRC
+
+#+RESULTS:
+: 6
+* Attempt 3. 
+This attempt recursively iterates over the design string building up a tree of towels that when flattened down into a string should recreate the original design string, if it does then the design is valid.
+
+The solution works on the small practice data but it runs out of memory on larger datasets. This could potentially be resolved through memoization but the solution it far too complex to truly be useful.
+#+BEGIN_SRC typescript
+const fs = require('node:fs')
+
+let input: string[] = fs.readFileSync('./practice.txt', 'utf8').trim().split('\n')
+let supply = input[0].split(",").map((t) => t.trim())
+let designs = input.slice(2).map((d) => d.trim())
+
+
+type Tree = { value: string, next: Tree[] }
+
+
+function flatten(trees: Tree[], val: string, result: string[]) {
+  if (trees.length === 0) {
+    result.push(val)
+  }
+  trees.forEach((tree) => {
+    flatten(tree.next, val + tree.value, result)
+  })
+}
+
+function matchTowelsToSubDesign(design: string, supply: string[]): Tree[] {
+  return supply.map((towel): Tree | null => {
+    if (design.startsWith(towel)) {
+      return {
+        "value": towel, "next": matchTowelsToSubDesign(design.slice(towel.length), supply)
+      }
+    }
+    return null
+  }).filter((t) => t !== null)
+}
+
+function matchTowelsToDesign(design: string, supply: string[]) {
+  let res = matchTowelsToSubDesign(design, supply)
+  let flattend: string[] = []
+  flatten(res, '', flattend)
+  return new Set(flattend)
+
+
+}
+
+function matchTowels(designs: string[], supply: string[]) {
+  let answer = 0
+  for (const design of designs) {
+
+    let res = matchTowelsToDesign(design, supply)
+    if (res.has(design)) {
+      answer++
+    }
+  }
+  return answer
+}
+
+let answer = matchTowels(designs, supply)
+console.log(answer)
+
+#+END_SRC
+
+#+RESULTS:
+: 6
+
+* Attempt 4
+At this point I was spinning my wheels and stuck in my head about what to do. When this happens at work I reach out to colleagues and walk them through my though my though process and layout my ideas. Either the act of talking clears things up or my colleagues and I are able to bound ideas off of each other until we reach a solution.
+
+Not having colleagues, I ended up looking up how others solved this problem. Reading through the solutions I found that I was on the right track with my third attempt I was just going too far into the weeds.
+
+The first iteration of Attempt 4 did not have any caching and ran longer than I had patience, adding memoization was a must.
+#+BEGIN_SRC typescript 
+const fs = require('node:fs')
+
+let input: string[] = fs.readFileSync('./practice.txt', 'utf8').trim().split('\n')
+let supply = input[0].split(",").map((t) => t.trim())
+let designs = input.slice(2).map((d) => d.trim())
+
+// with out this it will take long long time to compute
+function memoize<F extends Function>(fn: F) {
+  let cache: { [id: string]: number } = {}
+  return (...args: unknown[]) => {
+    let input = args[0] as string
+
+    if (input in cache) {
+      return cache[input]
+    }
+    let result = fn(...args)
+    cache[input] = result
+    return result
+  }
+}
+
+
+
+function matchTowelToDesign(design: string, supply: string[]): number {
+  if (design.length == 0) {
+    return 1
+  }
+  return supply.map((towel) => design.startsWith(towel) ?
+    cachedMatchTowelToDesign(design.slice(towel.length), supply) : 0
+  //swap || for + to get the total number of combinations for part 2
+  ).reduce((acc, v) => v || acc, 0)
+}
+
+const cachedMatchTowelToDesign = memoize(matchTowelToDesign)
+
+
+let answer = designs.reduce((total, design) => total + cachedMatchTowelToDesign(design, supply), 0)
+console.log(answer)
+
+#+END_SRC
+
+#+RESULTS:
+: 6
+
+

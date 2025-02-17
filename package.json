@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "typescript": "^5.7.3"
+  },
+  "scripts": {
+    "day19": "tsc && node day19.js",
+    "day19_naive": "tsc && node day19_naive.js",
+    "day19_rec": "tsc && node day19_recursive.js"
+  }
+}
